@@ -3,6 +3,9 @@ package com.example.apple.audioplayer;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.media.MediaPlayer;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -10,19 +13,44 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity{
 
     private MusicDBHelper musicDBHelper;
     private static final String TAG = "miao";
     private List<Music> musicList = new ArrayList<>();
     private List<Music> playingList = new ArrayList<>();
     private Music musicPlaying;
+    private MediaPlayer mediaPlayer = new MediaPlayer();
+    private SeekBar seekBar;
+    private Thread thread;
+    private Handler handler = new Handler(){
+        public void handleMessage(Message msg){
+            switch (msg.what) {
+                case 1:
+                    if (seekBar.getProgress() != TotalMusicListActivity.mediaPlayer.getCurrentPosition() * 100 / TotalMusicListActivity.mediaPlayer.getDuration()){
+                        Log.d(TAG, "handleMessage: " + TotalMusicListActivity.mediaPlayer.getCurrentPosition() * 100 / TotalMusicListActivity.mediaPlayer.getDuration());
+                        seekBar.setProgress(TotalMusicListActivity.mediaPlayer.getCurrentPosition() * 100 / TotalMusicListActivity.mediaPlayer.getDuration());
+                    }
+                    break;
+                case 2:
+                    TextView startTime = findViewById(R.id.start_time);
+                    if(startTime.getText().toString().trim()!=TotalMusicListActivity.mediaPlayer.getCurrentPosition()/1000/60+":"+TotalMusicListActivity.mediaPlayer.getCurrentPosition()/1000%60) {
+                        Log.d(TAG, "handleMessage: " + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
+                        startTime.setText(TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
+                    }
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,13 +65,13 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        //跳到歌单活动
+
         Button music_list = findViewById(R.id.music_list);
         music_list.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this,TotalMusicListActivity.class);
-                startActivityForResult(intent,1);
+                startActivityForResult(intent,0);
             }
         });
 
@@ -52,18 +80,80 @@ public class MainActivity extends AppCompatActivity {
         music_stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                TotalMusicListActivity.mediaPlayer.stop();
+                TextView startTime = findViewById(R.id.start_time);
+                startTime.setText("00:00");
+                seekBar.setProgress(0);
+                TextView music_playing = findViewById(R.id.now_playing);
+                music_playing.setText("");
+            }
+        });
+
+        final Button music_pause = findViewById(R.id.music_pause);
+        music_pause.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(TotalMusicListActivity.mediaPlayer.isPlaying()){
+                    music_pause.setText("播放");
+                    TotalMusicListActivity.mediaPlayer.pause();
+                }
+                else{
+                    music_pause.setText("暂停");
+                    TotalMusicListActivity.mediaPlayer.start();
+                    thread = new Thread(new SeekBarThread());
+                    thread.start();
+                }
+            }
+        });
+
+        Button music_loop1 = findViewById(R.id.music_loop1);
+        music_loop1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(TotalMusicListActivity.mediaPlayer.isLooping()){
+                    Toast.makeText(MainActivity.this,"取消单曲循环",Toast.LENGTH_SHORT).show();
+                    TotalMusicListActivity.mediaPlayer.setLooping(false);
+                }
+                else {
+                    Toast.makeText(MainActivity.this, "单曲循环", Toast.LENGTH_SHORT).show();
+                    TotalMusicListActivity.mediaPlayer.setLooping(true);
+                }
+            }
+        });
+
+        seekBar = findViewById(R.id.seek_bar);
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if(fromUser){
+                    Log.d(TAG, "onStopTrackingTouch: "+(int)(seekBar.getProgress()/100.0*TotalMusicListActivity.mediaPlayer.getDuration()));
+                    TotalMusicListActivity.mediaPlayer.seekTo((int)(seekBar.getProgress()/100.0*TotalMusicListActivity.mediaPlayer.getDuration()));
+                    TotalMusicListActivity.mediaPlayer.start();
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
 
             }
         });
+
+
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == 1 & resultCode == 0){
+        if(requestCode == 0 & resultCode == 0){
             musicPlaying = (Music) data.getSerializableExtra("music");
-            TextView music_playing = findViewById(R.id.music_playing);
+            TextView music_playing = findViewById(R.id.now_playing);
             music_playing.setText(musicPlaying.getSinger()+" - "+musicPlaying.getSongName());
+            Log.d(TAG, "onActivityResult: "+musicPlaying.toString());
             refreshPlayingList();
         }
     }
@@ -124,7 +214,13 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         refreshMusicList();
         refreshPlayingList();
-        Log.d(TAG, "onResume: "+"onResume");
+        if(TotalMusicListActivity.mediaPlayer.isPlaying()) {
+            TextView end_time = findViewById(R.id.end_time);
+            end_time.setText(TotalMusicListActivity.mediaPlayer.getDuration()/1000/60+":"+TotalMusicListActivity.mediaPlayer.getDuration()/1000%60);
+            Log.d(TAG, "onResume: "+TotalMusicListActivity.mediaPlayer.getDuration());
+            thread = new Thread(new SeekBarThread());
+            thread.start();
+        }
     }
 
     public void refreshMusicList(){
@@ -160,4 +256,27 @@ public class MainActivity extends AppCompatActivity {
         db.execSQL(sql,new Object[]{});
         super.onDestroy();
     }
+
+    class SeekBarThread implements Runnable {
+
+        @Override
+        public void run() {
+            while (TotalMusicListActivity.mediaPlayer != null && TotalMusicListActivity.mediaPlayer.isPlaying()) {
+                Message message1 = new Message();
+                message1.what = 1;
+                handler.sendMessage(message1);
+                Message message2 = new Message();
+                message2.what = 2;
+                handler.sendMessage(message2);
+                try {
+                    Thread.sleep(80);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }
+    }
+
 }

@@ -25,13 +25,6 @@
         android:layout_height="wrap_content" />
 
     <Button
-        android:id="@+id/music_recent"
-        android:text="最近"
-        android:layout_weight="1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
-    <Button
         android:id="@+id/music_collection"
         android:text="收藏"
         android:layout_weight="1"
@@ -41,6 +34,14 @@
         <Button
             android:id="@+id/music_loop2"
             android:text="循环播放"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+
+        <Button
+            android:id="@+id/music_loop1"
+            android:text="单曲循环"
             android:layout_weight="1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
@@ -61,13 +62,6 @@
         <Button
             android:id="@+id/music_next"
             android:text="下一首"
-            android:layout_weight="1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <Button
-            android:id="@+id/music_loop1"
-            android:text="单曲循环"
             android:layout_weight="1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
@@ -96,8 +90,35 @@
 
     <TextView
         android:id="@+id/now_playing"
+        android:textSize="20sp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:orientation="horizontal"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/start_time"
+            android:text="00:00"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <SeekBar
+            android:id="@+id/seek_bar"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/end_time"
+            android:text="00:00"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+
+    </LinearLayout>
 
 
     <TextView

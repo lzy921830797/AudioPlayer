@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.ListView;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +24,9 @@ public class TotalMusicListActivity extends AppCompatActivity {
     private MusicDBHelper musicDBHelper;
     private static final String TAG = "miao";
     private List<Music> musicList = new ArrayList<>();
-    private MediaPlayer mediaPlayer = new MediaPlayer();
+    public static MediaPlayer mediaPlayer = new MediaPlayer();
     private Music musicPlaying;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,8 +91,15 @@ public class TotalMusicListActivity extends AppCompatActivity {
     public void onBackPressed() {
         Intent intent = getIntent();
         intent.putExtra("music",musicPlaying);
-        setResult(1,intent);
+        setResult(0,intent);
         super.onBackPressed();
     }
+
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop: stop");
+        super.onStop();
+    }
+
 
 }
