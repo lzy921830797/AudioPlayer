@@ -1,6 +1,8 @@
 package com.example.apple.audioplayer;
 
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
+import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.MediaPlayer;
@@ -10,9 +12,11 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -29,43 +33,56 @@ public class MainActivity extends AppCompatActivity{
 
 
     public static int collect_flag = 0;
+    public static int isMain = 0;
     private MusicDBHelper musicDBHelper;
     private static final String TAG = "miao";
     private List<Music> musicList = new ArrayList<>();
     private List<Music> playingList = new ArrayList<>();
     private Music musicPlaying;
-    private MediaPlayer mediaPlayer = new MediaPlayer();
+    public static MediaPlayer mediaPlayer = new MediaPlayer();
     private SeekBar seekBar;
     private Thread thread;
+    private boolean isLooping=false;
     private Handler handler = new Handler(){
         public void handleMessage(Message msg){
             switch (msg.what) {
                 case 1:
                     if (seekBar.getProgress() != TotalMusicListActivity.mediaPlayer.getCurrentPosition() * 100 / TotalMusicListActivity.mediaPlayer.getDuration()){
-                        Log.d(TAG, "handleMessage: " + TotalMusicListActivity.mediaPlayer.getCurrentPosition() * 100 / TotalMusicListActivity.mediaPlayer.getDuration());
+ //                       Log.d(TAG, "handleMessage: " + TotalMusicListActivity.mediaPlayer.getCurrentPosition() * 100 / TotalMusicListActivity.mediaPlayer.getDuration());
                         seekBar.setProgress(TotalMusicListActivity.mediaPlayer.getCurrentPosition() * 100 / TotalMusicListActivity.mediaPlayer.getDuration());
                     }
                     break;
                 case 2:
                     TextView startTime = findViewById(R.id.start_time);
                     if(startTime.getText().toString().trim()!=TotalMusicListActivity.mediaPlayer.getCurrentPosition()/1000/60+":"+TotalMusicListActivity.mediaPlayer.getCurrentPosition()/1000%60) {
-                        Log.d(TAG, "handleMessage: " + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
+ //                       Log.d(TAG, "handleMessage: " + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
                         startTime.setText(TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + TotalMusicListActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
                     }
                     break;
                 case 3:
-                    Log.d(TAG, "handleMessage: 333");
                     if (seekBar.getProgress() != CollectActivity.mediaPlayer.getCurrentPosition() * 100 / CollectActivity.mediaPlayer.getDuration()){
-                        Log.d(TAG, "handleMessage: " + CollectActivity.mediaPlayer.getCurrentPosition() * 100 / CollectActivity.mediaPlayer.getDuration());
+ //                       Log.d(TAG, "handleMessage: " + CollectActivity.mediaPlayer.getCurrentPosition() * 100 / CollectActivity.mediaPlayer.getDuration());
                         seekBar.setProgress(CollectActivity.mediaPlayer.getCurrentPosition() * 100 / CollectActivity.mediaPlayer.getDuration());
                     }
                     break;
                 case 4:
-                    Log.d(TAG, "handleMessage: 444");
                     startTime = findViewById(R.id.start_time);
                     if(startTime.getText().toString().trim()!=CollectActivity.mediaPlayer.getCurrentPosition()/1000/60+":"+CollectActivity.mediaPlayer.getCurrentPosition()/1000%60) {
-                        Log.d(TAG, "handleMessage: " + CollectActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + CollectActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
+ //                       Log.d(TAG, "handleMessage: " + CollectActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + CollectActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
                         startTime.setText(CollectActivity.mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + CollectActivity.mediaPlayer.getCurrentPosition() / 1000 % 60);
+                    }
+                    break;
+                case 5:
+                    if (seekBar.getProgress() != mediaPlayer.getCurrentPosition() * 100 / mediaPlayer.getDuration()){
+                        //                       Log.d(TAG, "handleMessage: " + mediaPlayer.getCurrentPosition() * 100 / mediaPlayer.getDuration());
+                        seekBar.setProgress(mediaPlayer.getCurrentPosition() * 100 / mediaPlayer.getDuration());
+                    }
+                    break;
+                case 6:
+                    startTime = findViewById(R.id.start_time);
+                    if(startTime.getText().toString().trim()!=mediaPlayer.getCurrentPosition()/1000/60+":"+mediaPlayer.getCurrentPosition()/1000%60) {
+                        //                       Log.d(TAG, "handleMessage: " + mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + mediaPlayer.getCurrentPosition() / 1000 % 60);
+                        startTime.setText(mediaPlayer.getCurrentPosition() / 1000 / 60 + ":" + mediaPlayer.getCurrentPosition() / 1000 % 60);
                     }
                     break;
             }
@@ -102,6 +119,7 @@ public class MainActivity extends AppCompatActivity{
             public void onClick(View v) {
                 TotalMusicListActivity.mediaPlayer.stop();
                 CollectActivity.mediaPlayer.stop();
+                mediaPlayer.stop();
                 TextView startTime = findViewById(R.id.start_time);
                 startTime.setText("00:00");
                 seekBar.setProgress(0);
@@ -114,7 +132,7 @@ public class MainActivity extends AppCompatActivity{
         music_pause.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(collect_flag == 0) {
+                if(collect_flag == 0 && isMain == 0) {
                     if (TotalMusicListActivity.mediaPlayer.isPlaying()) {
                         music_pause.setText("播放");
                         TotalMusicListActivity.mediaPlayer.pause();
@@ -125,15 +143,27 @@ public class MainActivity extends AppCompatActivity{
                         thread.start();
                     }
                 }
-                else if(CollectActivity.mediaPlayer.isPlaying()){
-                    music_pause.setText("播放");
-                    CollectActivity.mediaPlayer.pause();
+                else if(collect_flag == 1 && isMain == 0) {
+                    if (CollectActivity.mediaPlayer.isPlaying()) {
+                        music_pause.setText("播放");
+                        CollectActivity.mediaPlayer.pause();
+                    } else {
+                        music_pause.setText("暂停");
+                        CollectActivity.mediaPlayer.start();
+                        thread = new Thread(new SeekBarThread());
+                        thread.start();
+                    }
                 }
                 else{
-                    music_pause.setText("暂停");
-                    CollectActivity.mediaPlayer.start();
-                    thread = new Thread(new SeekBarThread());
-                    thread.start();
+                    if (mediaPlayer.isPlaying()) {
+                        music_pause.setText("播放");
+                        mediaPlayer.pause();
+                    } else {
+                        music_pause.setText("暂停");
+                        mediaPlayer.start();
+                        thread = new Thread(new SeekBarThread());
+                        thread.start();
+                    }
                 }
             }
         });
@@ -142,7 +172,8 @@ public class MainActivity extends AppCompatActivity{
         music_loop1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (collect_flag == 0){
+                isLooping = false;
+                if (collect_flag == 0 && isMain == 0){
                     if (TotalMusicListActivity.mediaPlayer.isLooping()) {
                         Toast.makeText(MainActivity.this, "取消单曲循环", Toast.LENGTH_SHORT).show();
                         TotalMusicListActivity.mediaPlayer.setLooping(false);
@@ -151,13 +182,22 @@ public class MainActivity extends AppCompatActivity{
                         TotalMusicListActivity.mediaPlayer.setLooping(true);
                     }
                 }
-                else{
+                else if(collect_flag == 1 && isMain == 0){
                     if (CollectActivity.mediaPlayer.isLooping()) {
                         Toast.makeText(MainActivity.this, "取消单曲循环", Toast.LENGTH_SHORT).show();
                         CollectActivity.mediaPlayer.setLooping(false);
                     } else {
                         Toast.makeText(MainActivity.this, "单曲循环", Toast.LENGTH_SHORT).show();
                         CollectActivity.mediaPlayer.setLooping(true);
+                    }
+                }
+                else{
+                    if (mediaPlayer.isLooping()) {
+                        Toast.makeText(MainActivity.this, "取消单曲循环", Toast.LENGTH_SHORT).show();
+                        mediaPlayer.setLooping(false);
+                    } else {
+                        Toast.makeText(MainActivity.this, "单曲循环", Toast.LENGTH_SHORT).show();
+                        mediaPlayer.setLooping(true);
                     }
                 }
             }
@@ -168,15 +208,19 @@ public class MainActivity extends AppCompatActivity{
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if(fromUser){
-                    if(collect_flag == 0) {
-                        Log.d(TAG, "onStopTrackingTouch: " + (int) (seekBar.getProgress() / 100.0 * TotalMusicListActivity.mediaPlayer.getDuration()));
+                    if(collect_flag == 0 && isMain == 0) {
+//                        Log.d(TAG, "onStopTrackingTouch: " + (int) (seekBar.getProgress() / 100.0 * TotalMusicListActivity.mediaPlayer.getDuration()));
                         TotalMusicListActivity.mediaPlayer.seekTo((int) (seekBar.getProgress() / 100.0 * TotalMusicListActivity.mediaPlayer.getDuration()));
                         TotalMusicListActivity.mediaPlayer.start();
                     }
-                    else{
-                        Log.d(TAG, "onStopTrackingTouch: " + (int) (seekBar.getProgress() / 100.0 * CollectActivity.mediaPlayer.getDuration()));
+                    else if(collect_flag == 1 && isMain == 0){
+//                        Log.d(TAG, "onStopTrackingTouch: " + (int) (seekBar.getProgress() / 100.0 * CollectActivity.mediaPlayer.getDuration()));
                         CollectActivity.mediaPlayer.seekTo((int) (seekBar.getProgress() / 100.0 * CollectActivity.mediaPlayer.getDuration()));
                         CollectActivity.mediaPlayer.start();
+                    }
+                    else{
+                        mediaPlayer.seekTo((int) (seekBar.getProgress() / 100.0 * mediaPlayer.getDuration()));
+                        mediaPlayer.start();
                     }
                 }
             }
@@ -204,8 +248,147 @@ public class MainActivity extends AppCompatActivity{
         });
 
 
+        Button music_last = findViewById(R.id.music_last);
+        music_last.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                for(int i=0;i<playingList.size();i++){
+                    if(playingList.get(i).getId() == musicPlaying.getId()){
+                        TotalMusicListActivity.mediaPlayer.stop();
+                        CollectActivity.mediaPlayer.stop();
+                        Log.d(TAG, "onClick: "+i);
+                        if((i-1)!=-1) {
+                            musicPlaying = playingList.get(i - 1);
+                        }
+                        else {
+                            musicPlaying = playingList.get(playingList.size() - 1);
+                        }
+                        musicPlaying.setIsPlaying(1);
+                        mediaPlayer.reset();
+                        AssetManager assetManager = getAssets();
+                        try {
+                            TotalMusicListActivity.mediaPlayer.stop();
+                            CollectActivity.mediaPlayer.stop();
+                            AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                            mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+                            mediaPlayer.prepare();
+                            mediaPlayer.start();
+                            isMain = 1;
+                            TextView music_playing = findViewById(R.id.now_playing);
+                            music_playing.setText(musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                            TextView end_time = findViewById(R.id.end_time);
+                            end_time.setText(mediaPlayer.getDuration()/1000/60+":"+mediaPlayer.getDuration()/1000%60);
+                            thread = new Thread(new SeekBarThread());
+                            thread.start();
+                            Log.d(TAG, "onItemClick: " + "start");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+
+        Button musicNext = findViewById(R.id.music_next);
+        musicNext.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                for(int i=0;i<playingList.size();i++){
+                    if(playingList.get(i).getId() == musicPlaying.getId()){
+                        TotalMusicListActivity.mediaPlayer.stop();
+                        CollectActivity.mediaPlayer.stop();
+                        Log.d(TAG, "onClick: "+i);
+                        if((i+1)!=playingList.size()) {
+                            musicPlaying = playingList.get(i + 1);
+                        }
+                        else {
+                            musicPlaying = playingList.get(0);
+                        }
+                        musicPlaying.setIsPlaying(1);
+                        mediaPlayer.reset();
+                        AssetManager assetManager = getAssets();
+                        try {
+                            TotalMusicListActivity.mediaPlayer.stop();
+                            CollectActivity.mediaPlayer.stop();
+                            AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                            mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+                            mediaPlayer.prepare();
+                            mediaPlayer.start();
+                            isMain = 1;
+                            TextView music_playing = findViewById(R.id.now_playing);
+                            music_playing.setText(musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                            TextView end_time = findViewById(R.id.end_time);
+                            end_time.setText(mediaPlayer.getDuration()/1000/60+":"+mediaPlayer.getDuration()/1000%60);
+                            thread = new Thread(new SeekBarThread());
+                            thread.start();
+                            Log.d(TAG, "onItemClick: " + "start");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                if(isLooping) {
+                    for (int i = 0; i < playingList.size(); i++) {
+                        Log.d(TAG, "onCompletion: " + musicPlaying.getId());
+                        if (playingList.get(i).getId() == musicPlaying.getId()) {
+                            if ((i + 1) != playingList.size()) {
+                                musicPlaying = playingList.get(i + 1);
+                            } else {
+                                musicPlaying = playingList.get(0);
+                            }
+                            musicPlaying.setIsPlaying(1);
+                            mediaPlayer.reset();
+                            AssetManager assetManager = getAssets();
+                            try {
+                                TotalMusicListActivity.mediaPlayer.stop();
+                                CollectActivity.mediaPlayer.stop();
+                                AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                                mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+                                mediaPlayer.prepare();
+                                mediaPlayer.start();
+                                isMain = 1;
+                                TextView music_playing = findViewById(R.id.now_playing);
+                                music_playing.setText(musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                                TextView end_time = findViewById(R.id.end_time);
+                                end_time.setText(mediaPlayer.getDuration() / 1000 / 60 + ":" + mediaPlayer.getDuration() / 1000 % 60);
+                                thread = new Thread(new SeekBarThread());
+                                thread.start();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        Button musicLoop2 = findViewById(R.id.music_loop2);
+        musicLoop2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                 if(isLooping) {
+                     Toast.makeText(MainActivity.this,"结束循环播放",Toast.LENGTH_SHORT).show();
+                     isLooping = false;
+                 }
+                 else {
+                     Toast.makeText(MainActivity.this,"开始循环播放",Toast.LENGTH_SHORT).show();
+                     isLooping = true;
+                 }
+            }
+        });
 
     }
+
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -214,7 +397,7 @@ public class MainActivity extends AppCompatActivity{
             TextView music_playing = findViewById(R.id.now_playing);
             if(TotalMusicListActivity.mediaPlayer.isPlaying() || CollectActivity.mediaPlayer.isPlaying()) {
                 music_playing.setText(musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
-                Log.d(TAG, "onActivityResult: " + musicPlaying.toString());
+                //Log.d(TAG, "onActivityResult: " + musicPlaying.toString());
             }
             refreshPlayingList();
         }
@@ -225,6 +408,54 @@ public class MainActivity extends AppCompatActivity{
         MusicAdapter adapter = new MusicAdapter(MainActivity.this,R.layout.music_item,playingList);
         listView.setAdapter(adapter);
 //        Log.d(TAG, "refreshPlayingList: "+playingList);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                musicPlaying = playingList.get(position);
+                mediaPlayer.reset();
+                AssetManager assetManager = getAssets();
+                try {
+                    TotalMusicListActivity.mediaPlayer.stop();
+                    CollectActivity.mediaPlayer.stop();
+                    AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                    mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+                    mediaPlayer.prepare();
+                    mediaPlayer.start();
+                    isMain = 1;
+                    TextView music_playing = findViewById(R.id.now_playing);
+                    music_playing.setText(musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                    TextView end_time = findViewById(R.id.end_time);
+                    end_time.setText(mediaPlayer.getDuration()/1000/60+":"+mediaPlayer.getDuration()/1000%60);
+                    thread = new Thread(new SeekBarThread());
+                    thread.start();
+                    Log.d(TAG, "onItemClick: " + "start");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        registerForContextMenu(listView);
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        getMenuInflater().inflate(R.menu.context_menu,menu);
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo musicInfo = (AdapterView.AdapterContextMenuInfo)item.getMenuInfo();
+        Music music = playingList.get(musicInfo.position);
+        Log.e(TAG, "onContextItemSelected: "+music.toString());
+        String sql = "update music set isPlaying=0 where id=?";
+        SQLiteDatabase db = musicDBHelper.getWritableDatabase();
+        db.execSQL(sql,new Object[]{music.getId()});
+        db.close();
+        db = musicDBHelper.getWritableDatabase();
+        db.execSQL("update sqlite_sequence set seq=0 where name='note'");
+        refreshMusicList();
+        refreshPlayingList();
+        return true;
     }
 
     public void initMusic() throws IOException {
@@ -323,7 +554,7 @@ public class MainActivity extends AppCompatActivity{
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Log.d(TAG, "onOptionsMenuClosed: ");
+//        Log.d(TAG, "onOptionsMenuClosed: ");
         Intent intent = new Intent(MainActivity.this,CollectActivity.class);
         startActivityForResult(intent,0);
         return true;
@@ -341,7 +572,7 @@ public class MainActivity extends AppCompatActivity{
 
         @Override
         public void run() {
-            while (TotalMusicListActivity.mediaPlayer != null && TotalMusicListActivity.mediaPlayer.isPlaying() && collect_flag == 0) {
+            while (TotalMusicListActivity.mediaPlayer != null && TotalMusicListActivity.mediaPlayer.isPlaying() && collect_flag == 0 && isMain == 0) {
                 Message message1 = new Message();
                 message1.what = 1;
                 handler.sendMessage(message1);
@@ -361,6 +592,20 @@ public class MainActivity extends AppCompatActivity{
                 handler.sendMessage(message1);
                 Message message2 = new Message();
                 message2.what = 4;
+                handler.sendMessage(message2);
+                try {
+                    Thread.sleep(80);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            while (mediaPlayer != null && mediaPlayer.isPlaying() && isMain == 1) {
+                Message message1 = new Message();
+                message1.what = 5;
+                handler.sendMessage(message1);
+                Message message2 = new Message();
+                message2.what = 6;
                 handler.sendMessage(message2);
                 try {
                     Thread.sleep(80);

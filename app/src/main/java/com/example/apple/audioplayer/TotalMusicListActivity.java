@@ -45,15 +45,17 @@ public class TotalMusicListActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 MainActivity.collect_flag = 0;
+                MainActivity.isMain = 0;
                 musicPlaying = musicList.get(position);
                 musicPlaying.setIsPlaying(1);
-                mediaPlayer.reset();
+                MainActivity.mediaPlayer.stop();
+                TotalMusicListActivity.mediaPlayer.reset();
                 AssetManager assetManager = getAssets();
                 try {
                     AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
-                    mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
-                    mediaPlayer.prepare();
-                    mediaPlayer.start();
+                    TotalMusicListActivity.mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+                    TotalMusicListActivity.mediaPlayer.prepare();
+                    TotalMusicListActivity.mediaPlayer.start();
                     musicPlaying.setIsPlaying(1);
                     updatePlayingStat(musicPlaying );
                     Log.d(TAG, "onItemClick: " + "start");

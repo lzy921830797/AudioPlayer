@@ -9,6 +9,8 @@ import android.media.MediaPlayer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.ContextMenu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -39,10 +41,13 @@ public class CollectActivity extends AppCompatActivity {
         }
         MusicAdapter adapter = new MusicAdapter(CollectActivity.this,R.layout.music_item,musicList);
         listView.setAdapter(adapter);
+        registerForContextMenu(listView);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 MainActivity.collect_flag = 1;
+                MainActivity.isMain = 0;
+                MainActivity.mediaPlayer.stop();
                 musicPlaying = musicList.get(position);
                 musicPlaying.setIsPlaying(1);
                 mediaPlayer.reset();
@@ -62,7 +67,32 @@ public class CollectActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        getMenuInflater().inflate(R.menu.context_menu,menu);
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo musicInfo = (AdapterView.AdapterContextMenuInfo)item.getMenuInfo();
+        Music music = musicList.get(musicInfo.position);
+        Log.e(TAG, "onContextItemSelected: "+music.toString());
+        String sql = "update music set isCollect=0 where id=?";
+        SQLiteDatabase db = musicDBHelper.getWritableDatabase();
+        db.execSQL(sql,new Object[]{music.getId()});
+        db.close();
+        db = musicDBHelper.getWritableDatabase();
+        db.execSQL("update sqlite_sequence set seq=0 where name='note'");
+        try {
+            initMusic();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+
     public void initMusic() throws IOException {
+        musicList.clear();
         SQLiteDatabase db = musicDBHelper.getWritableDatabase();
         Cursor cursor = db.rawQuery("select * from music where isCollect=1",null);
         if(cursor.moveToFirst()){
