@@ -1,6 +1,8 @@
 package com.example.apple.audioplayer;
 
-public class Music {
+import java.io.Serializable;
+
+public class Music implements Serializable{
 
     public int id;
     public int isCollect;

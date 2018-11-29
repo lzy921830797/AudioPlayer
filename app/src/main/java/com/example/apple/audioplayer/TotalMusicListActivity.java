@@ -1,5 +1,6 @@
 package com.example.apple.audioplayer;
 
+import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.database.Cursor;
@@ -10,6 +11,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ListView;
 
 import java.io.IOException;
@@ -22,6 +24,7 @@ public class TotalMusicListActivity extends AppCompatActivity {
     private static final String TAG = "miao";
     private List<Music> musicList = new ArrayList<>();
     private MediaPlayer mediaPlayer = new MediaPlayer();
+    private Music musicPlaying;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,18 +42,18 @@ public class TotalMusicListActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Music music = musicList.get(position);
-                music.setIsPlaying(1);
+                musicPlaying = musicList.get(position);
+                musicPlaying.setIsPlaying(1);
                 mediaPlayer.reset();
                 AssetManager assetManager = getAssets();
                 try {
-                    AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/"+music.getSinger()+" - "+music.getSongName());
-                    mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(),assetFileDescriptor.getStartOffset(),assetFileDescriptor.getLength());
+                    AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                    mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
                     mediaPlayer.prepare();
                     mediaPlayer.start();
-                    music.setIsPlaying(1);
-                    updatePlayingStat(music);
-                    Log.d(TAG, "onItemClick: "+"start");
+                    musicPlaying.setIsPlaying(1);
+                    updatePlayingStat(musicPlaying );
+                    Log.d(TAG, "onItemClick: " + "start");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -80,6 +83,14 @@ public class TotalMusicListActivity extends AppCompatActivity {
         SQLiteDatabase db = musicDBHelper.getWritableDatabase();
         String sql = "update music set isPlaying=1 where id=?";
         db.execSQL(sql,new Object[]{music.getId()});
+    }
+
+    @Override
+    public void onBackPressed() {
+        Intent intent = getIntent();
+        intent.putExtra("music",musicPlaying);
+        setResult(1,intent);
+        super.onBackPressed();
     }
 
 }

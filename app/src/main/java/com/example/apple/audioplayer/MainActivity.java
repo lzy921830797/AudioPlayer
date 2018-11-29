@@ -3,12 +3,14 @@ package com.example.apple.audioplayer;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "miao";
     private List<Music> musicList = new ArrayList<>();
     private List<Music> playingList = new ArrayList<>();
+    private Music musicPlaying;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,37 +37,54 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
+        //跳到歌单活动
         Button music_list = findViewById(R.id.music_list);
         music_list.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this,TotalMusicListActivity.class);
-                startActivity(intent);
+                startActivityForResult(intent,1);
             }
         });
-        refreshPlayingList();
+
+
+        Button music_stop = findViewById(R.id.music_stop);
+        music_stop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == 1 & resultCode == 0){
+            musicPlaying = (Music) data.getSerializableExtra("music");
+            TextView music_playing = findViewById(R.id.music_playing);
+            music_playing.setText(musicPlaying.getSinger()+" - "+musicPlaying.getSongName());
+            refreshPlayingList();
+        }
     }
 
     public void refreshPlayingList(){
         ListView listView = findViewById(R.id.playing);
         MusicAdapter adapter = new MusicAdapter(MainActivity.this,R.layout.music_item,playingList);
         listView.setAdapter(adapter);
-        Log.d(TAG, "refreshPlayingList: "+playingList);
+//        Log.d(TAG, "refreshPlayingList: "+playingList);
     }
 
     public void initMusic() throws IOException {
+        playingList.clear();
         SQLiteDatabase db = musicDBHelper.getWritableDatabase();
         if(isEmpty()) {
             String[] files;
             files = getAssets().list("songs");
             for (int i = 0; i < files.length; i++) {
-                Log.d(TAG, "initMusic: " + files[i]);
                 String[] data = files[i].split(" - ");
-                Log.d(TAG, "initMusic: " + data[0]);
-                Log.d(TAG, "initMusic: " + data[1]);
                 Music music = new Music(i,0,0,data[1], data[0]);
                 musicList.add(music);
-                Log.d(TAG, "initMusic: "+music.toString());
                 String sql = "insert into music(isCollect,isPlaying,songName,singer) values (?,?,?,?)";
                 db.execSQL(sql, new Object[]{0,0, musicList.get(i).getSongName(), musicList.get(i).getSinger()});
             }
@@ -109,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void refreshMusicList(){
         musicList.clear();
+        playingList.clear();
         SQLiteDatabase db = musicDBHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery("select * from music",null);
         if(cursor.moveToFirst()){
@@ -123,13 +144,14 @@ public class MainActivity extends AppCompatActivity {
                     playingList.add(music);
                 }
                 musicList.add(music);
-                Log.d(TAG, "refreshMusicList: "+musicList);
-                Log.d(TAG, "refreshMusicList: "+playingList);
+//                Log.d(TAG, "refreshMusicList: "+musicList);
+//                Log.d(TAG, "refreshMusicList: "+playingList);
             }while (cursor.moveToNext());
         }
         cursor.close();
         db.close();
     }
+
 
     @Override
     protected void onDestroy() {
