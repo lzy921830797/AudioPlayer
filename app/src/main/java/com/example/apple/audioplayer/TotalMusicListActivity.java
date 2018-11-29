@@ -44,6 +44,7 @@ public class TotalMusicListActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                CollectActivity.mediaPlayer.stop();
                 MainActivity.collect_flag = 0;
                 MainActivity.isMain = 0;
                 musicPlaying = musicList.get(position);

@@ -378,10 +378,12 @@ public class MainActivity extends AppCompatActivity{
                  if(isLooping) {
                      Toast.makeText(MainActivity.this,"结束循环播放",Toast.LENGTH_SHORT).show();
                      isLooping = false;
+                     mediaPlayer.setLooping(false);
                  }
                  else {
                      Toast.makeText(MainActivity.this,"开始循环播放",Toast.LENGTH_SHORT).show();
                      isLooping = true;
+                     mediaPlayer.setLooping(false);
                  }
             }
         });

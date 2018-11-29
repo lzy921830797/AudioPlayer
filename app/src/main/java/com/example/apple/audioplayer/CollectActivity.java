@@ -33,38 +33,39 @@ public class CollectActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_collect);
         musicDBHelper = new MusicDBHelper(this,"Music.db",null,1);
-        ListView listView = findViewById(R.id.collect_list);
-        try {
-            initMusic();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        MusicAdapter adapter = new MusicAdapter(CollectActivity.this,R.layout.music_item,musicList);
-        listView.setAdapter(adapter);
-        registerForContextMenu(listView);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                MainActivity.collect_flag = 1;
-                MainActivity.isMain = 0;
-                MainActivity.mediaPlayer.stop();
-                musicPlaying = musicList.get(position);
-                musicPlaying.setIsPlaying(1);
-                mediaPlayer.reset();
-                AssetManager assetManager = getAssets();
-                try {
-                    AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
-                    mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
-                    mediaPlayer.prepare();
-                    mediaPlayer.start();
-                    musicPlaying.setIsPlaying(1);
-                    updatePlayingStat(musicPlaying );
-                    Log.d(TAG, "onItemClick: " + "start");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+        refreshList();
+//        ListView listView = findViewById(R.id.collect_list);
+//        try {
+//            initMusic();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        MusicAdapter adapter = new MusicAdapter(CollectActivity.this,R.layout.music_item,musicList);
+//        listView.setAdapter(adapter);
+//        registerForContextMenu(listView);
+//        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+//            @Override
+//            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+//                MainActivity.collect_flag = 1;
+//                MainActivity.isMain = 0;
+//                MainActivity.mediaPlayer.stop();
+//                musicPlaying = musicList.get(position);
+//                musicPlaying.setIsPlaying(1);
+//                mediaPlayer.reset();
+//                AssetManager assetManager = getAssets();
+//                try {
+//                    AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+//                    mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+//                    mediaPlayer.prepare();
+//                    mediaPlayer.start();
+//                    musicPlaying.setIsPlaying(1);
+//                    updatePlayingStat(musicPlaying );
+//                    Log.d(TAG, "onItemClick: " + "start");
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
     }
 
     @Override
@@ -88,7 +89,44 @@ public class CollectActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        refreshList();
         return true;
+    }
+
+    public void refreshList(){
+        ListView listView = findViewById(R.id.collect_list);
+        try {
+            initMusic();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        MusicAdapter adapter = new MusicAdapter(CollectActivity.this,R.layout.music_item,musicList);
+        listView.setAdapter(adapter);
+        registerForContextMenu(listView);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                MainActivity.collect_flag = 1;
+                MainActivity.isMain = 0;
+                MainActivity.mediaPlayer.stop();
+                TotalMusicListActivity.mediaPlayer.stop();
+                musicPlaying = musicList.get(position);
+                musicPlaying.setIsPlaying(1);
+                mediaPlayer.reset();
+                AssetManager assetManager = getAssets();
+                try {
+                    AssetFileDescriptor assetFileDescriptor = assetManager.openFd("songs/" + musicPlaying.getSinger() + " - " + musicPlaying.getSongName());
+                    mediaPlayer.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+                    mediaPlayer.prepare();
+                    mediaPlayer.start();
+                    musicPlaying.setIsPlaying(1);
+                    updatePlayingStat(musicPlaying );
+                    Log.d(TAG, "onItemClick: " + "start");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     public void initMusic() throws IOException {
