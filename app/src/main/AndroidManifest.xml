@@ -18,7 +18,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".TotalMusicListActivity"></activity>
+        <activity android:name=".TotalMusicListActivity" />
+        <activity android:name=".CollectActivity"></activity>
     </application>
 
 </manifest>

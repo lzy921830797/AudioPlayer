@@ -11,15 +11,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.ListView;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TotalMusicListActivity extends AppCompatActivity {
+public class CollectActivity extends AppCompatActivity {
 
     private MusicDBHelper musicDBHelper;
     private static final String TAG = "miao";
@@ -31,20 +29,20 @@ public class TotalMusicListActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_total_music_list);
+        setContentView(R.layout.activity_collect);
         musicDBHelper = new MusicDBHelper(this,"Music.db",null,1);
-        ListView listView = findViewById(R.id.total_music);
+        ListView listView = findViewById(R.id.collect_list);
         try {
             initMusic();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        MusicAdapter adapter = new MusicAdapter(TotalMusicListActivity.this,R.layout.music_item,musicList);
+        MusicAdapter adapter = new MusicAdapter(CollectActivity.this,R.layout.music_item,musicList);
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                MainActivity.collect_flag = 0;
+                MainActivity.collect_flag = 1;
                 musicPlaying = musicList.get(position);
                 musicPlaying.setIsPlaying(1);
                 mediaPlayer.reset();
@@ -66,7 +64,7 @@ public class TotalMusicListActivity extends AppCompatActivity {
 
     public void initMusic() throws IOException {
         SQLiteDatabase db = musicDBHelper.getWritableDatabase();
-        Cursor cursor = db.rawQuery("select * from music",null);
+        Cursor cursor = db.rawQuery("select * from music where isCollect=1",null);
         if(cursor.moveToFirst()){
             do{
                 int id = cursor.getInt(0);
