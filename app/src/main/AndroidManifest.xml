@@ -18,8 +18,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".TotalMusicListActivity" />
-        <activity android:name=".CollectActivity"></activity>
+        <activity android:name=".TotalMusicListActivity"
+            android:label="歌单"/>
+        <activity android:name=".CollectActivity"
+            android:label="收藏夹"></activity>
     </application>
 
 </manifest>
